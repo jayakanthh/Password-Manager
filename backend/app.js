@@ -20,6 +20,7 @@ const corsOptions = {
     const allowedOrigins = [
       'http://localhost:5173',
       'https://password-manager-six-psi.vercel.app',
+      'https://cipher-safe-frontend.vercel.app',
       'https://cipherrsafee.vercel.app'
     ];
     
