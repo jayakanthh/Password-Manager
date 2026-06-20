@@ -1,0 +1,19 @@
+{
+  "name": "password-manager-backend-root",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Root manifest so Vercel installs backend deps into the root node_modules, resolvable from both api/ and backend/.",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.0",
+    "pg": "^8.11.3",
+    "pg-hstore": "^2.3.4",
+    "sequelize": "^6.37.7"
+  }
+}
