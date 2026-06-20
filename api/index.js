@@ -71,6 +71,13 @@ app.get(['/', '/api'], (req, res) => {
   });
 });
 
+// Health check / keep-alive: runs a real DB query so Supabase counts it as
+// activity and does not pause the free-tier project. Hit daily by a Vercel Cron.
+app.get('/api/health', async (req, res) => {
+  const dbOk = await testConnection();
+  res.status(dbOk ? 200 : 503).json({ ok: dbOk, db: dbOk ? 'up' : 'down', ts: new Date().toISOString() });
+});
+
 // Import and use routes
 const authRoutes = require('../backend/routes/auth');
 const passwordRoutes = require('../backend/routes/passwords');
