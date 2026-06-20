@@ -22,16 +22,10 @@ const corsOptions = {
       'https://password-manager-six-psi.vercel.app',
       'https://cipher-safe-frontend.vercel.app',
       'https://cipherrsafee.vercel.app',
-      'https://ciphersafee.vercel.app',
-      'https://*.vercel.app' // Allow Vercel preview deployments
+      'https://ciphersafee.vercel.app'
     ];
-    
-    const isAllowed = allowedOrigins.some(allowed => {
-      if (allowed.includes('*')) {
-        return origin.includes(allowed.replace('*', ''));
-      }
-      return allowed === origin;
-    });
+
+    const isAllowed = allowedOrigins.includes(origin);
     
     if (isAllowed) {
       callback(null, true);

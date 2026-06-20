@@ -1,4 +1,5 @@
 const { pool } = require('../config/database');
+const { encrypt, decrypt } = require('../utils/crypto');
 
 class Password {
   constructor(data) {
@@ -14,16 +15,22 @@ class Password {
     this.updated_at = data.updated_at;
   }
 
+  // Build a Password from a DB row, decrypting the stored secret.
+  static fromRow(row) {
+    if (!row) return null;
+    return new Password({ ...row, password: decrypt(row.password) });
+  }
+
   // Create password
   static async create(passwordData) {
     const { title, username, password, url, user_id, notes } = passwordData;
-    
+
     const result = await pool.query(
       'INSERT INTO passwords (title, username, password, url, user_id, notes, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW()) RETURNING *',
-      [title, username, password, url || null, user_id, notes || null]
+      [title, username, encrypt(password), url || null, user_id, notes || null]
     );
-    
-    return new Password(result.rows[0]);
+
+    return Password.fromRow(result.rows[0]);
   }
 
   // Find passwords by user ID
@@ -32,8 +39,8 @@ class Password {
       'SELECT * FROM passwords WHERE user_id = $1 ORDER BY created_at DESC',
       [userId]
     );
-    
-    return result.rows.map(row => new Password(row));
+
+    return result.rows.map(row => Password.fromRow(row));
   }
 
   // Find password by ID and user ID
@@ -42,20 +49,20 @@ class Password {
       'SELECT * FROM passwords WHERE id = $1 AND user_id = $2 LIMIT 1',
       [id, userId]
     );
-    
-    return result.rows.length > 0 ? new Password(result.rows[0]) : null;
+
+    return result.rows.length > 0 ? Password.fromRow(result.rows[0]) : null;
   }
 
   // Update password
   static async updateById(id, userId, updateData) {
     const { title, username, password, url, notes } = updateData;
-    
+
     const result = await pool.query(
       'UPDATE passwords SET title = $1, username = $2, password = $3, url = $4, notes = $5, updated_at = NOW() WHERE id = $6 AND user_id = $7 RETURNING *',
-      [title, username, password, url || null, notes || null, id, userId]
+      [title, username, encrypt(password), url || null, notes || null, id, userId]
     );
-    
-    return result.rows.length > 0 ? new Password(result.rows[0]) : null;
+
+    return result.rows.length > 0 ? Password.fromRow(result.rows[0]) : null;
   }
 
   // Delete password
@@ -84,7 +91,7 @@ class Password {
         id SERIAL PRIMARY KEY,
         title VARCHAR(100) NOT NULL,
         username VARCHAR(255) NOT NULL,
-        password VARCHAR(255) NOT NULL,
+        password TEXT NOT NULL,
         url VARCHAR(500),
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         last_used TIMESTAMP,
