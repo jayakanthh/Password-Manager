@@ -1,5 +1,5 @@
 const dotenv = require('dotenv');
-const { testConnection } = require('./config/database');
+const { pool, testConnection } = require('./config/database');
 const app = require('./app');
 const User = require('./models/User');
 const Password = require('./models/Password');
@@ -75,7 +75,7 @@ async function gracefulShutdown() {
     }
 
     // Close database connection
-    await sequelize.close();
+    await pool.end();
     console.log('Database connection closed');
 
     console.log('Graceful shutdown completed');

@@ -1,22 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const bcrypt = require('bcryptjs');
-const { Op } = require('sequelize');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 
 // GET /api/users/profile - Get user profile
 router.get('/profile', auth, async (req, res) => {
   try {
-    const user = await User.findByPk(req.userId, {
-      attributes: ['id', 'name', 'email']
-    });
-
+    const user = await User.findById(req.userId);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-
-    res.json(user);
+    res.json({ id: user.id, name: user.name, email: user.email });
   } catch (error) {
     console.error('Error fetching user profile:', error);
     res.status(500).json({ message: 'Server error' });
@@ -28,55 +22,42 @@ router.put('/profile', auth, async (req, res) => {
   try {
     const { name, email, currentPassword, newPassword } = req.body;
 
-    // Find the user
-    const user = await User.findByPk(req.userId);
-
+    const user = await User.findById(req.userId);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // If trying to change password, verify current password
-    if (currentPassword && newPassword) {
+    // Changing password requires the current one to verify
+    if (newPassword) {
+      if (!currentPassword) {
+        return res.status(400).json({ message: 'Current password is required to set a new password' });
+      }
       const isMatch = await user.isValidPassword(currentPassword);
       if (!isMatch) {
         return res.status(400).json({ message: 'Current password is incorrect' });
       }
+      if (newPassword.length < 8) {
+        return res.status(400).json({ message: 'New password must be at least 8 characters long' });
+      }
     }
 
-    // Check if email is already taken by another user
-    if (email !== user.email) {
-      const existingUser = await User.findOne({
-        where: {
-          email,
-          id: { [Op.ne]: req.userId }
-        }
-      });
-      
-      if (existingUser) {
+    // Email must stay unique
+    if (email && email !== user.email) {
+      const existing = await User.findByEmail(email);
+      if (existing && existing.id !== user.id) {
         return res.status(400).json({ message: 'Email is already in use' });
       }
     }
 
-    // Prepare update data
-    const updateData = {
-      name,
-      email
-    };
-
-    // If changing password, add it to the update
-    if (currentPassword && newPassword) {
-      const salt = await bcrypt.genSalt(10);
-      updateData.password = await bcrypt.hash(newPassword, salt);
-    }
-
-    // Update user
-    await user.update(updateData);
-
-    res.json({ message: 'Profile updated successfully' });
+    const updated = await User.updateProfile(req.userId, { name, email, newPassword });
+    res.json({
+      message: 'Profile updated successfully',
+      user: { id: updated.id, name: updated.name, email: updated.email }
+    });
   } catch (error) {
     console.error('Error updating user profile:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-module.exports = router; 
+module.exports = router;

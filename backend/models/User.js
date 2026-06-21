@@ -52,6 +52,31 @@ class User {
     return await bcrypt.compare(password, this.password);
   }
 
+  // Update profile (name / email / password); hashes password if provided
+  static async updateProfile(id, { name, email, newPassword }) {
+    const fields = [];
+    const values = [];
+    let i = 1;
+
+    if (name !== undefined) { fields.push(`name = $${i++}`); values.push(name); }
+    if (email !== undefined) { fields.push(`email = $${i++}`); values.push(email); }
+    if (newPassword) {
+      const salt = await bcrypt.genSalt(10);
+      fields.push(`password = $${i++}`);
+      values.push(await bcrypt.hash(newPassword, salt));
+    }
+
+    if (fields.length === 0) return User.findById(id);
+
+    fields.push('updated_at = NOW()');
+    values.push(id);
+    const result = await pool.query(
+      `UPDATE users SET ${fields.join(', ')} WHERE id = $${i} RETURNING *`,
+      values
+    );
+    return result.rows.length > 0 ? new User(result.rows[0]) : null;
+  }
+
   // Update last login
   async updateLastLogin() {
     await pool.query(
